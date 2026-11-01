@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertOctagon, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Box, Boxes, Building2, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, Command, Download, Factory, FileText, Filter, Gauge, GitBranch, LayoutDashboard, MapPin, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, ShieldAlert, Truck, Warehouse, X, Zap } from 'lucide-react';
+import { Activity, AlertOctagon, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, Box, Boxes, Building2, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, Command, Download, Factory, FileText, Filter, Gauge, GitBranch, LayoutDashboard, MapPin, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, ShieldAlert, Truck, Warehouse, X, Zap, Sun, Moon, Waves, Flame, Palette, UserRound, LogOut, SlidersHorizontal, SearchCheck } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
 
 const api = async (url, options={}) => {
@@ -12,7 +12,15 @@ const api = async (url, options={}) => {
 const money = n => Number(n||0).toLocaleString('en-IN');
 const shortDate = value => value ? new Date(String(value).replace(' ','T')).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '—';
 
-function App(){
+const THEMES = [
+  {id:'obsidian',label:'Obsidian',color:'#baff39',Icon:Moon},
+  {id:'paper',label:'Paper',color:'#3157e8',Icon:Sun},
+  {id:'ultraviolet',label:'Ultraviolet',color:'#a78bfa',Icon:Zap},
+  {id:'ocean',label:'Ocean',color:'#38c7d9',Icon:Waves},
+  {id:'ember',label:'Ember',color:'#ff855e',Icon:Flame}
+];
+function App({user,onLogout}){
+
   const [page,setPage]=useState('Overview');
   const [dashboard,setDashboard]=useState(null);
   const [products,setProducts]=useState([]);
@@ -30,6 +38,24 @@ function App(){
   const [selectedRecall,setSelectedRecall]=useState(null);
   const [impact,setImpact]=useState(null);
   const [mobileNav,setMobileNav]=useState(false);
+  const [theme,setTheme]=useState(()=>localStorage.getItem('traceguard_theme')||'obsidian');
+  const [themeMenu,setThemeMenu]=useState(false);
+  const [notificationOpen,setNotificationOpen]=useState(false);
+  const [profileOpen,setProfileOpen]=useState(false);
+  const [workspaceOpen,setWorkspaceOpen]=useState(false);
+  const [preferencesOpen,setPreferencesOpen]=useState(false);
+  const [globalSearchOpen,setGlobalSearchOpen]=useState(false);
+  const [globalSearch,setGlobalSearch]=useState('');
+  const [reducedMotion,setReducedMotion]=useState(()=>localStorage.getItem('traceguard_reduced_motion')==='true');
+  const [compactMode,setCompactMode]=useState(()=>localStorage.getItem('traceguard_compact')==='true');
+  useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('traceguard_theme',theme);},[theme]);
+  useEffect(()=>{document.documentElement.dataset.motion=reducedMotion?'reduced':'full';localStorage.setItem('traceguard_reduced_motion',String(reducedMotion));},[reducedMotion]);
+  useEffect(()=>{document.documentElement.dataset.density=compactMode?'compact':'comfortable';localStorage.setItem('traceguard_compact',String(compactMode));},[compactMode]);
+  useEffect(()=>{
+    const handleKey=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setGlobalSearchOpen(true);}if(e.key==='Escape'){setThemeMenu(false);setNotificationOpen(false);setProfileOpen(false);setWorkspaceOpen(false);setPreferencesOpen(false);setGlobalSearchOpen(false);}};
+    window.addEventListener('keydown',handleKey);return()=>window.removeEventListener('keydown',handleKey);
+  },[]);
+
 
   const refresh=async()=>{
     setLoading(true);setError('');
@@ -75,13 +101,18 @@ function App(){
   return <div className="app-shell">
     <aside className={`sidebar ${mobileNav?'sidebar-open':''}`}>
       <div className="brand"><div className="brand-mark"><GitBranch size={21}/></div><div><div className="brand-name">traceguard<span>.</span></div><div className="brand-sub">NETWORK INTELLIGENCE</div></div><button className="icon-btn mobile-close" onClick={()=>setMobileNav(false)}><X size={18}/></button></div>
-      <div className="workspace-switch"><div className="workspace-avatar">TG</div><div className="workspace-copy"><b>Alpha Network</b><span>Control workspace</span></div><ChevronDown size={15}/></div>
+      <button className="workspace-switch" onClick={()=>setWorkspaceOpen(v=>!v)} aria-expanded={workspaceOpen}><div className="workspace-avatar">TG</div><div className="workspace-copy"><b>Alpha Network</b><span>Control workspace</span></div><ChevronDown size={15}/></button>
+      {workspaceOpen&&<div className="tg-popover tg-workspace-pop"><div className="tg-popover-kicker">CURRENT WORKSPACE</div><b>Alpha Network</b><span>Supply chain control environment</span><div className="tg-workspace-metrics"><span><b>{dashboard?.products??'—'}</b> products</span><span><b>{dashboard?.locations??'—'}</b> locations</span></div><button onClick={()=>{setWorkspaceOpen(false);setPreferencesOpen(true)}}><SlidersHorizontal size={14}/> Workspace preferences</button></div>}
       <nav>{nav.map(group=><div className="nav-group" key={group.label}><div className="nav-label">{group.label}</div>{group.items.map(([label,Icon])=><button key={label} onClick={()=>{setPage(label);setMobileNav(false);setQuery('');}} className={`nav-item ${page===label?'active':''}`}><Icon size={17}/><span>{label}</span>{label==='Recall center'&&dashboard?.recalledBatches>0&&<i className="nav-count">{dashboard.recalledBatches}</i>}</button>)}</div>)}</nav>
-      <div className="sidebar-bottom"><div className="system-card"><div className="system-top"><span className="pulse-dot"/>SYSTEM STATUS</div><b>All systems operational</b><span>Database connection monitored</span></div><button className="nav-item"><Settings2 size={17}/><span>Preferences</span></button><div className="profile"><div className="profile-avatar">RG</div><div><b>Network admin</b><span>Administrator</span></div><div className="profile-more">•••</div></div></div>
+      <div className="sidebar-bottom"><div className="system-card"><div className="system-top"><span className="pulse-dot"/>SYSTEM STATUS</div><b>All systems operational</b><span>Database connection monitored</span></div><button className="nav-item" onClick={()=>setPreferencesOpen(true)}><Settings2 size={17}/><span>Preferences</span></button><button className="profile tg-profile-button" onClick={()=>setProfileOpen(v=>!v)}><div className="profile-avatar">{(user?.name||user?.email||'TG').slice(0,2).toUpperCase()}</div><div><b>{user?.name||'Network user'}</b><span>{user?.email||'Signed in'}</span></div><div className="profile-more">•••</div></button>
+      {profileOpen&&<div className="tg-popover tg-profile-pop"><div className="tg-profile-heading"><div className="profile-avatar">{(user?.name||user?.email||'TG').slice(0,2).toUpperCase()}</div><div><b>{user?.name||'Network user'}</b><span>{user?.email}</span></div></div><button onClick={()=>{setProfileOpen(false);setPreferencesOpen(true)}}><Settings2 size={14}/> Preferences</button><button className="tg-danger-action" onClick={()=>{setProfileOpen(false);onLogout?.()}}><LogOut size={14}/> Sign out</button></div></div>
     </aside>
     {mobileNav&&<div className="scrim" onClick={()=>setMobileNav(false)}/>} 
     <main className="main-area">
-      <header className="topbar"><div className="crumb"><button className="icon-btn menu-toggle" onClick={()=>setMobileNav(true)}><Menu size={19}/></button><span>Workspace</span><ChevronRight size={14}/><b>{page}</b></div><div className="top-actions"><div className="live-indicator"><span className="pulse-dot"/> LIVE DATA</div><button className="icon-btn" title="Refresh data" onClick={refresh}><RefreshCw size={17}/></button><button className="icon-btn notification" title="Notifications"><Bell size={17}/><i/></button><div className="top-avatar">RG</div></div></header>
+      <header className="topbar"><div className="crumb"><button className="icon-btn menu-toggle" onClick={()=>setMobileNav(true)}><Menu size={19}/></button><span>Workspace</span><ChevronRight size={14}/><b>{page}</b></div><div className="top-actions"><div className="live-indicator"><span className="pulse-dot"/> LIVE DATA</div><button className="icon-btn" title="Search (Ctrl/⌘ K)" onClick={()=>setGlobalSearchOpen(true)}><Search size={17}/></button><button className="icon-btn" title="Refresh data" onClick={refresh} disabled={loading}><RefreshCw size={17} className={loading?'tg-spin-icon':''}/></button>
+      <div className="tg-anchor"><button className="icon-btn notification" title="Notifications" aria-expanded={notificationOpen} onClick={()=>setNotificationOpen(v=>!v)}><Bell size={17}/>{((dashboard?.alerts?.length||0)>0)&&<i/>}</button>{notificationOpen&&<div className="tg-popover tg-notification-pop"><div className="tg-popover-title"><b>Network alerts</b><span>{dashboard?.alerts?.length||0} active</span></div>{dashboard?.alerts?.length?dashboard.alerts.slice(0,5).map(a=><button className="tg-notice-row" key={a.id} onClick={()=>{setPage('Recall center');setNotificationOpen(false)}}><span className="tg-notice-icon"><ShieldAlert size={15}/></span><span><b>{a.recall_code}</b><small>{a.product_name} · {a.batch_code}</small><small>{a.status}</small></span><ChevronRight size={14}/></button>):<div className="tg-notice-empty"><ShieldCheck size={20}/><b>No active recall alerts</b><span>New network risks will appear here.</span></div>}<button className="tg-popover-footer" onClick={()=>{setPage('Audit log');setNotificationOpen(false)}}>View activity ledger <ChevronRight size={13}/></button></div>}</div>
+      <div className="tg-anchor"><button className="tg-top-theme" onClick={()=>setThemeMenu(v=>!v)} aria-expanded={themeMenu} title="Change color theme"><span className="tg-theme-current" style={{background:THEMES.find(t=>t.id===theme)?.color}}/><span>{THEMES.find(t=>t.id===theme)?.label||'Theme'}</span><ChevronDown size={13}/></button>{themeMenu&&<div className="tg-theme-menu tg-theme-menu-top"><div className="tg-theme-menu-label">COLOR SYSTEM</div>{THEMES.map(t=><button key={t.id} className={`tg-theme-option ${theme===t.id?'selected':''}`} onClick={()=>{setTheme(t.id);setThemeMenu(false);notify(`${t.label} theme applied`)}}><span className="tg-theme-color" style={{background:t.color}}><t.Icon size={14}/></span><span>{t.label}</span>{theme===t.id&&<b>ACTIVE</b>}</button>)}</div>}</div>
+      <div className="tg-anchor"><button className="top-avatar tg-avatar-button" onClick={()=>setProfileOpen(v=>!v)} title="Open profile">{(user?.name||user?.email||'TG').slice(0,2).toUpperCase()}</button></div></div></header>
       <div className="content-wrap">
         <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/> TRACEGUARD / {page.toUpperCase()}</div><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="heading-actions"><span className="date-chip"><Clock3 size={14}/> {new Date().toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</span><button className="btn btn-secondary" onClick={refresh}><RefreshCw size={15}/> Refresh</button></div></div>
         {error&&<div className="error-banner"><AlertTriangle size={17}/><div><b>API connection issue</b><span>{error}. Start MySQL and the Express server, then refresh.</span></div></div>}
@@ -98,12 +129,26 @@ function App(){
       </div>
       <footer className="footer"><span>TRACEGUARD <b>v1.0.0</b></span><span>Built for visibility. Designed for action. <i>●</i></span></footer>
     </main>
+    {preferencesOpen&&<PreferencesModal theme={theme} setTheme={setTheme} reducedMotion={reducedMotion} setReducedMotion={setReducedMotion} compactMode={compactMode} setCompactMode={setCompactMode} onClose={()=>setPreferencesOpen(false)} onReset={()=>{setTheme('obsidian');setReducedMotion(false);setCompactMode(false);notify('Preferences reset to defaults')}}/>}
+    {globalSearchOpen&&<GlobalSearch value={globalSearch} setValue={setGlobalSearch} onClose={()=>setGlobalSearchOpen(false)} onNavigate={p=>{setPage(p);setGlobalSearchOpen(false);setGlobalSearch('');}}/>}
     {modal&&<Modal type={modal} products={products} batches={batches} locations={locations} onClose={()=>setModal('')} onProduct={createProduct} onLocation={createLocation} onBatch={createBatch} onShipment={createShipment} onRecall={createRecall}/>}
     {selectedRecall&&impact&&<ImpactModal impact={impact} onClose={()=>{setSelectedRecall(null);setImpact(null);}} onExport={exportImpact}/>}
     {toast&&<div className="toast"><Check size={17}/>{toast}</div>}
   </div>;
 }
 
+function PreferencesModal({theme,setTheme,reducedMotion,setReducedMotion,compactMode,setCompactMode,onClose,onReset}){
+  return <div className="modal-backdrop tg-preferences-backdrop" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><section className="modal tg-preferences-modal"><div className="modal-head"><div><div className="eyebrow">TRACEGUARD / PERSONALISE</div><h2>Preferences</h2><p>Make the command center work your way.</p></div><button className="icon-btn" onClick={onClose}><X size={19}/></button></div>
+    <div className="tg-preference-section"><div><b>Color theme</b><span>Choose an interface palette. Your choice is saved on this device.</span></div><div className="tg-theme-grid">{THEMES.map(t=><button key={t.id} className={`tg-theme-tile ${theme===t.id?'selected':''}`} onClick={()=>setTheme(t.id)}><i style={{background:t.color}}/><span>{t.label}</span>{theme===t.id&&<Check size={14}/>}</button>)}</div></div>
+    <div className="tg-preference-row"><div><b>Reduced motion</b><span>Limit interface animations for comfort and accessibility.</span></div><button className={`tg-toggle ${reducedMotion?'on':''}`} role="switch" aria-checked={reducedMotion} onClick={()=>setReducedMotion(v=>!v)}><i/></button></div>
+    <div className="tg-preference-row"><div><b>Compact density</b><span>Reduce spacing to fit more records on screen.</span></div><button className={`tg-toggle ${compactMode?'on':''}`} role="switch" aria-checked={compactMode} onClick={()=>setCompactMode(v=>!v)}><i/></button></div>
+    <div className="modal-actions"><button className="btn btn-secondary" onClick={onReset}>Reset defaults</button><button className="btn btn-primary" onClick={onClose}>Done <Check size={15}/></button></div></section></div>;
+}
+function GlobalSearch({value,setValue,onClose,onNavigate}){
+ const pages=['Overview','Products','Batches','Shipments','Locations','Recall center','Analytics','Audit log'];
+ const results=pages.filter(p=>p.toLowerCase().includes(value.toLowerCase()));
+ return <div className="modal-backdrop tg-search-backdrop" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><section className="tg-command-palette"><div className="tg-command-input"><Search size={19}/><input autoFocus value={value} onChange={e=>setValue(e.target.value)} placeholder="Search pages and open a workspace…"/><kbd>ESC</kbd></div><div className="tg-command-label">{value?'MATCHING PAGES':'QUICK NAVIGATION'}</div>{results.map((p,i)=><button key={p} onClick={()=>onNavigate(p)}><span className="tg-command-index">0{i+1}</span><span>{p}</span><ChevronRight size={15}/></button>)}{!results.length&&<div className="tg-command-empty">No matching pages. Try “shipments” or “analytics”.</div>}<div className="tg-command-hint">↑ ↓ NAVIGATION · ENTER TO OPEN · ESC TO CLOSE</div></section></div>;
+}
 function SectionTitle({title,sub,action}){return <div className="section-title"><div><h3>{title}</h3>{sub&&<p>{sub}</p>}</div>{action}</div>}
 function Stat({label,value,meta,Icon,tone='blue',trend}){return <div className="stat-card"><div className="stat-top"><span>{label}</span><span className={`stat-icon ${tone}`}><Icon size={18}/></span></div><div className="stat-value">{value??'—'}</div><div className="stat-meta"><span className={trend==='down'?'muted':'positive'}>{trend==='down'?<ArrowDownRight size={13}/>:<ArrowUpRight size={13}/>} {meta}</span></div></div>}
 function Status({value}){const cls=String(value||'').toLowerCase().replaceAll(' ','-');return <span className={`status status-${cls}`}><i/>{value}</span>}

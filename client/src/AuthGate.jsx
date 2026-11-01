@@ -72,7 +72,7 @@ export default function AuthGate() {
   </div>;
 
   if (token && !user) return <div className="tg-auth-loading"><span className="tg-loader"/><span>Restoring secure session</span><ThemePicker /></div>;
-  if (user) return <><App /><div className="tg-session-tools"><span className="tg-session-user"><i/> {user.name || user.email}</span><ThemePicker /><button className="tg-logout" onClick={logout}>Sign out ↗</button></div></>;
+  if (user) return <App user={user} onLogout={logout} />;
 
   return <div className="tg-auth-screen">
     <div className="tg-auth-grid" aria-hidden="true"/><div className="tg-auth-glow tg-glow-a"/><div className="tg-auth-glow tg-glow-b"/>
