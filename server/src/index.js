@@ -107,6 +107,9 @@ app.post('/api/shipments', async (req,res,next) => {
 });
 app.patch('/api/shipments/:id/status', async (req,res,next)=>{
   try{
+    const [[current]] = await pool.query('SELECT s.id,b.status batch_status FROM shipments s JOIN batches b ON b.id=s.batch_id WHERE s.id=?',[req.params.id]);
+    if(!current) return res.status(404).json({error:'Shipment not found.'});
+    if(current.batch_status==='Recalled' && req.body.status!=='Cancelled') return res.status(409).json({error:'Shipment belongs to a recalled batch. Only cancellation is allowed.'});
     const {status}=req.body;
     if(!['Dispatched','In Transit','Delivered','Cancelled'].includes(status)) return res.status(400).json({error:'Invalid shipment status.'});
     const [r]=await pool.execute("UPDATE shipments SET status=?,delivered_at=IF(?='Delivered',NOW(),delivered_at) WHERE id=?",[status,status,req.params.id]);
