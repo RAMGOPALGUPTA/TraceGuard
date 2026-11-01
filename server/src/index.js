@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import pool from './db.js';
+import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 dotenv.config();
 
 const app = express();
@@ -13,6 +14,71 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ status: 'ok', database: 'connected' }); }
   catch { res.status(503).json({ status: 'error', database: 'unavailable' }); }
+});
+
+
+const AUTH_SECRET = process.env.AUTH_SECRET || 'traceguard-local-development-secret-change-before-deploy';
+const makeToken = user => {
+  const payload = Buffer.from(JSON.stringify({ id: user.id, email: user.email, name: user.name, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })).toString('base64url');
+  const signature = createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+};
+const authenticate = (req, res, next) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\\s+/i, '');
+    if (!token || !token.includes('.')) return res.status(401).json({ error: 'Sign in to access TraceGuard.' });
+    const [payload, signature] = token.split('.');
+    const expected = createHmac('sha256', AUTH_SECRET).update(payload).digest();
+    const supplied = Buffer.from(signature, 'base64url');
+    if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return res.status(401).json({ error: 'Invalid session. Please sign in again.' });
+    const user = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (!user.id || !user.exp || user.exp < Date.now()) return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    req.user = user;
+    next();
+  } catch { return res.status(401).json({ error: 'Invalid session. Please sign in again.' }); }
+};
+
+app.post('/api/auth/register', async (req, res, next) => {
+  try {
+    const name = String(req.body.name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    if (name.length < 2 || name.length > 80) return res.status(400).json({ error: 'Name must be between 2 and 80 characters.' });
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 190) return res.status(400).json({ error: 'Enter a valid email address.' });
+    if (password.length < 10 || password.length > 200) return res.status(400).json({ error: 'Password must be between 10 and 200 characters.' });
+    const salt = randomBytes(16).toString('hex');
+    const passwordHash = scryptSync(password, salt, 64).toString('hex');
+    const [result] = await pool.execute('INSERT INTO users (name,email,password_hash,password_salt) VALUES (?,?,?,?)', [name,email,passwordHash,salt]);
+    const user = { id: result.insertId, name, email };
+    res.status(201).json({ token: makeToken(user), user });
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'An account with this email already exists.' });
+    if (e.code === 'ER_NO_SUCH_TABLE') return res.status(503).json({ error: 'Authentication database is not installed yet. Run database/auth-migration.sql.' });
+    next(e);
+  }
+});
+
+app.post('/api/auth/login', async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
+    const [[user]] = await pool.execute('SELECT id,name,email,password_hash,password_salt FROM users WHERE email=? LIMIT 1', [email]);
+    if (!user) return res.status(401).json({ error: 'Email or password is incorrect.' });
+    const actual = scryptSync(password, user.password_salt, 64);
+    const expected = Buffer.from(user.password_hash, 'hex');
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return res.status(401).json({ error: 'Email or password is incorrect.' });
+    res.json({ token: makeToken(user), user: { id: user.id, name: user.name, email: user.email } });
+  } catch (e) {
+    if (e.code === 'ER_NO_SUCH_TABLE') return res.status(503).json({ error: 'Authentication database is not installed yet. Run database/auth-migration.sql.' });
+    next(e);
+  }
+});
+
+app.get('/api/auth/me', authenticate, (req, res) => res.json({ user: { id: req.user.id, name: req.user.name, email: req.user.email } }));
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health' || req.path.startsWith('/auth/')) return next();
+  return authenticate(req, res, next);
 });
 
 app.get('/api/dashboard', async (_req,res,next) => {
