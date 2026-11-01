@@ -25,7 +25,7 @@ const makeToken = user => {
 };
 const authenticate = (req, res, next) => {
   try {
-    const token = (req.headers.authorization || '').replace(/^Bearer\\s+/i, '');
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!token || !token.includes('.')) return res.status(401).json({ error: 'Sign in to access TraceGuard.' });
     const [payload, signature] = token.split('.');
     const expected = createHmac('sha256', AUTH_SECRET).update(payload).digest();
@@ -44,7 +44,7 @@ app.post('/api/auth/register', async (req, res, next) => {
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
     if (name.length < 2 || name.length > 80) return res.status(400).json({ error: 'Name must be between 2 and 80 characters.' });
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 190) return res.status(400).json({ error: 'Enter a valid email address.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 190) return res.status(400).json({ error: 'Enter a valid email address.' });
     if (password.length < 10 || password.length > 200) return res.status(400).json({ error: 'Password must be between 10 and 200 characters.' });
     const salt = randomBytes(16).toString('hex');
     const passwordHash = scryptSync(password, salt, 64).toString('hex');
