@@ -17,7 +17,11 @@ TraceGuard is an academic ADBMS full-stack prototype for tracking products, batc
 3. Backend:
    `cd server && cp .env.example .env`
    Edit DB credentials, then `npm install && npm run dev`.
-4. If you already have an existing database, install the authentication table once:\n   `mysql -u root -p traceguard < database/auth-migration.sql`\n   For a fresh database, the users table is already included in `database/schema.sql`.\n5. Set a long random `AUTH_SECRET` in `server/.env` before deployment. Do not commit `.env`.\n6. Frontend (new terminal):
+4. If you already have an existing database, install the authentication table once:
+   `mysql -u root -p traceguard < database/auth-migration.sql`
+   For a fresh database, the users table is already included in `database/schema.sql`.
+5. Set a long random `AUTH_SECRET` in `server/.env` before deployment. Do not commit `.env`.
+6. Frontend (new terminal):
    `cd client && npm install && npm run dev`
 7. Open http://localhost:5173
 
