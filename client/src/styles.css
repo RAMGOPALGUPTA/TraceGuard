@@ -134,3 +134,6 @@ body{background:var(--tg-canvas)}
 :root[data-theme="obsidian"]{color-scheme:dark}
 :root[data-theme="paper"]{color-scheme:light}
 @media(max-width:760px){.tg-top-theme>span:nth-child(2){display:none}.tg-top-theme{padding:0 8px}.tg-notification-pop{position:fixed;top:62px;right:10px;width:min(320px,calc(100vw - 20px))}.tg-profile-pop{position:fixed;top:62px;right:10px}.tg-theme-menu-top{position:fixed;top:62px;right:10px}.tg-workspace-pop{top:140px;left:10px}.tg-theme-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tg-session-tools{display:none}}
+
+.sidebar .tg-profile-pop{position:fixed;left:18px;right:auto;top:auto;bottom:78px;width:235px}
+.tg-profile-button:focus-visible,.tg-top-theme:focus-visible,.tg-theme-option:focus-visible,.tg-theme-tile:focus-visible,.tg-toggle:focus-visible{outline:2px solid var(--tg-accent);outline-offset:3px}
