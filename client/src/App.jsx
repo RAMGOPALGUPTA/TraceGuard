@@ -3,7 +3,8 @@ import { Activity, AlertOctagon, AlertTriangle, ArrowDownRight, ArrowUpRight, Be
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
 
 const api = async (url, options={}) => {
-  const response = await fetch(url,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});
+  const token = localStorage.getItem('traceguard_token');
+  const response = await fetch(url,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{ }),...(options.headers||{})}});
   const data = await response.json().catch(()=>({}));
   if(!response.ok) throw new Error(data.error||'Request failed');
   return data;
